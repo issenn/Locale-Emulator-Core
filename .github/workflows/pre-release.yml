@@ -1,0 +1,183 @@
+name: 'Build and Pre-release'
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'master'
+    tags-ignore:
+      - "*"
+  pull_request:
+    branches:
+      - 'master'
+  watch:
+    types: [started]
+
+env:
+  TZ: 'Asia/Shanghai'
+
+jobs:
+  build:
+    # env:
+    #   Platform: ${{ matrix.platform }}
+    #   Configuration: ${{ matrix.config }}
+    strategy:
+      matrix:
+        os:
+          - 'windows-2016'
+        # platform:
+        #   - 'Win32'
+        #   - 'x64'
+        # config:
+        #   # - 'Debug'
+        #   - 'Release'
+        # channel:
+          # - 'nightly'
+          # - 'stable'
+
+    name: 'Build and Pre-release Locale-Emulator-Core on action'
+    if: github.event.repository.owner.id == github.event.sender.id
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      ## see https://github.com/actions/checkout
+      - name: 'Checkout master code'
+        id: 'checkout'
+        uses: 'actions/checkout@v2'
+        with:
+          # repository: xupefei/Locale-Emulator-Core
+          ref: master
+          # https://docs.github.com/en/actions/reference/authentication-in-a-workflow
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # - name: Get Repo Current Tag or commit
+      #   id: current-tag
+      #   run: echo "::set-output name=tag::$(git describe --long --tags || echo "v0.0.0-0-g$(git describe --long --always --tags)")"
+
+      - name: Extract .7z packages in _Compilers folders.
+        working-directory: ./_Compilers
+        run: 7z x _Compilers.7z
+
+      - name: Extract .7z packages in _Libs folders.
+        working-directory: ./_Libs
+        run: 7z x _Libs.7z
+
+      - name: Extract .7z packages in _WDK folders.
+        working-directory: ./_WDK
+        run: 7z x _WDK.7z
+
+      - name: Set up .NET Core 3.1
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '3.1.x'
+
+      ## see https://github.com/microsoft/setup-msbuild
+      - name: Set up MSBuild 2017
+        uses: microsoft/setup-msbuild@v1.0.2
+        with:
+          vs-version: '15.9'
+
+      - name: Set up NuGet
+        uses: nuget/setup-nuget@v1
+        with:
+          nuget-version: '5.x'
+
+      - name: 'Restore NuGet Packages and Build LoaderDll'
+        env:
+          SolutionPath: LoaderDll.sln
+        working-directory: ./LoaderDll
+        run: |
+          nuget restore ${{ env.SolutionPath }}
+          msbuild ${{ env.SolutionPath }}  # /p:Configuration=${{ env.Configuration }} /p:Platform=${{ env.Platform }}
+          tar -zcvf Locale.Emulator.Core.LoaderDll.tar.gz --transform='flags=r;s|^Release|Locale.Emulator.Core.LoaderDll|' Release
+
+      - name: 'Restore NuGet Packages and Build LocaleEmulator'
+        env:
+          SolutionPath: LocaleEmulator.sln
+        working-directory: ./LocaleEmulator
+        run: |
+          nuget restore ${{ env.SolutionPath }}
+          msbuild ${{ env.SolutionPath }}  # /p:Configuration=${{ env.Configuration }} /p:Platform=${{ env.Platform }}
+          tar -zcvf Locale.Emulator.Core.LocaleEmulator.tar.gz --transform='flags=r;s|^Release|Locale.Emulator.Core.LocaleEmulator|' Release
+
+      - name: 'Restore NuGet Packages and Build Loader'
+        env:
+          SolutionPath: Loader.sln
+        working-directory: ./Loader
+        run: |
+          nuget restore ${{ env.SolutionPath }}
+          msbuild ${{ env.SolutionPath }}  # /p:Configuration=${{ env.Configuration }} /p:Platform=${{ env.Platform }}
+          tar -zcvf Locale.Emulator.Core.Loader.tar.gz --transform='flags=r;s|^Release|Locale.Emulator.Core.Loader|' Release
+
+      # Upload artifact to Github Actions
+      - name: 'Upload Artifact LoaderDll'
+        uses: 'actions/upload-artifact@v2'
+        with:
+          name: 'LoaderDll'
+          path: 'LoaderDll/Locale.Emulator.Core.LoaderDll.tar.gz'
+          if-no-files-found: error
+
+      - name: 'Upload Artifact LocaleEmulator'
+        uses: 'actions/upload-artifact@v2'
+        with:
+          name: 'LocaleEmulator'
+          path: 'LocaleEmulator/Locale.Emulator.Core.LocaleEmulator.tar.gz'
+          if-no-files-found: error
+
+      - name: 'Upload Artifact Loader'
+        uses: 'actions/upload-artifact@v2'
+        with:
+          name: 'Loader'
+          path: 'Loader/Locale.Emulator.Core.Loader.tar.gz'
+          if-no-files-found: error
+
+      - name: 'Automatic Releases'
+        id: 'automatic_releases'
+        uses: 'marvinpinto/action-automatic-releases@latest'
+        with:
+          repo_token:  "${{ secrets.GITHUB_TOKEN }}"
+          prerelease: true
+          automatic_release_tag: 'latest'
+          title: 'Latest Build'
+          files: |
+            LoaderDll/Locale.Emulator.Core.LoaderDll.tar.gz
+            LocaleEmulator/Locale.Emulator.Core.LocaleEmulator.tar.gz
+            Loader/Locale.Emulator.Core.Loader.tar.gz
+
+      # - name: Create Github Release
+      #   id: 'create_release'
+      #   uses: 'ncipollo/release-action@v1'
+      #   with:
+      #     token: "${{ secrets.GITHUB_TOKEN }}"
+      #     allowUpdates: true
+      #     artifactErrorsFailBuild: true
+      #     # artifact: 
+      #     artifacts: '**/*.tar.gz'
+      #     commit: master
+      #     tag: latest
+      #     name: 'Latest Build'
+      #     prerelease: true
+
+      # - name: Create Github Release
+      #   id: create_release
+      #   uses: actions/create-release@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     tag_name: master
+      #     release_name:  ${{ steps.current-tag.outputs.tag }}
+      #     commitish: master
+      #     # body_path: release_note.md
+      #     draft: false
+      #     prerelease: true
+
+      # - name: Upload Release Asset
+      #   id: upload-release-asset
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ steps.create_release.outputs.upload_url }}
+      #     asset_path: src\Tellurium.StableElements\bin\Release\Tellurium.StableElements.${{ env.Version }}.nupkg
+      #     asset_name: Tellurium.StableElements.${{ env.Version }}.nupkg
+      #     asset_content_type: binary/octet-stream
