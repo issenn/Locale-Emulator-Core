@@ -48,7 +48,7 @@ jobs:
           # repository: xupefei/Locale-Emulator-Core
           ref: master
           # https://docs.github.com/en/actions/reference/authentication-in-a-workflow
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.ACCESS_TOKEN || secrets.GITHUB_TOKEN }}
 
       # - name: Get Repo Current Tag or commit
       #   id: current-tag
@@ -135,7 +135,7 @@ jobs:
         id: 'automatic_releases'
         uses: 'marvinpinto/action-automatic-releases@latest'
         with:
-          repo_token:  "${{ secrets.GITHUB_TOKEN }}"
+          repo_token:  "${{ secrets.ACCESS_TOKEN || secrets.GITHUB_TOKEN }}"
           prerelease: true
           automatic_release_tag: 'latest'
           title: 'Latest Build'

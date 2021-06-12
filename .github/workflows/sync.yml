@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: build
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.ACCESS_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Sync with upstream
         if: github.repository != 'issenn/Locale-Emulator-Core'
@@ -31,7 +31,7 @@ jobs:
           upstream_branch: build
           target_branch: build
           git_pull_args: '-s recursive -Xtheirs'
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.ACCESS_TOKEN || secrets.GITHUB_TOKEN }}
 
   sync-master:
     name: sync
@@ -43,7 +43,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: master
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.ACCESS_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Sync with upstream
         if: github.repository != 'xupefei/Locale-Emulator-Core'
@@ -53,4 +53,4 @@ jobs:
           upstream_branch: master
           target_branch: master
           git_pull_args: '-s recursive -Xtheirs'
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.ACCESS_TOKEN || secrets.GITHUB_TOKEN }}
