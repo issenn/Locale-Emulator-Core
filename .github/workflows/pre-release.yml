@@ -18,19 +18,19 @@ env:
 
 jobs:
   build:
-    # env:
-    #   Platform: ${{ matrix.platform }}
-    #   Configuration: ${{ matrix.config }}
+    env:
+      Platform: ${{ matrix.platform }}
+      Configuration: ${{ matrix.config }}
     strategy:
       matrix:
         os:
           - 'windows-2016'
-        # platform:
-        #   - 'Win32'
-        #   - 'x64'
-        # config:
-        #   # - 'Debug'
-        #   - 'Release'
+        platform:
+          - 'Win32'
+          # - 'x64'
+        config:
+          # - 'Debug'
+          - 'Release'
         # channel:
           # - 'nightly'
           # - 'stable'
@@ -89,7 +89,7 @@ jobs:
         run: |
           nuget restore ${{ env.SolutionPath }}
           msbuild ${{ env.SolutionPath }}  # /p:Configuration=${{ env.Configuration }} /p:Platform=${{ env.Platform }}
-          tar -zcvf Locale.Emulator.Core.LoaderDll.tar.gz --transform='flags=r;s|^Release|Locale.Emulator.Core.LoaderDll|' Release
+          tar -zcvf Locale.Emulator.Core.LoaderDll.tar.gz --transform='flags=r;s|^${{ env.Configuration }}|Locale.Emulator.Core.LoaderDll|' ${{ env.Configuration }}
 
       - name: 'Restore NuGet Packages and Build LocaleEmulator'
         env:
@@ -98,7 +98,7 @@ jobs:
         run: |
           nuget restore ${{ env.SolutionPath }}
           msbuild ${{ env.SolutionPath }}  # /p:Configuration=${{ env.Configuration }} /p:Platform=${{ env.Platform }}
-          tar -zcvf Locale.Emulator.Core.LocaleEmulator.tar.gz --transform='flags=r;s|^Release|Locale.Emulator.Core.LocaleEmulator|' Release
+          tar -zcvf Locale.Emulator.Core.LocaleEmulator.tar.gz --transform='flags=r;s|^${{ env.Configuration }}|Locale.Emulator.Core.LocaleEmulator|' ${{ env.Configuration }}
 
       - name: 'Restore NuGet Packages and Build Loader'
         env:
@@ -107,7 +107,7 @@ jobs:
         run: |
           nuget restore ${{ env.SolutionPath }}
           msbuild ${{ env.SolutionPath }}  # /p:Configuration=${{ env.Configuration }} /p:Platform=${{ env.Platform }}
-          tar -zcvf Locale.Emulator.Core.Loader.tar.gz --transform='flags=r;s|^Release|Locale.Emulator.Core.Loader|' Release
+          tar -zcvf Locale.Emulator.Core.Loader.tar.gz --transform='flags=r;s|^${{ env.Configuration }}|Locale.Emulator.Core.Loader|' ${{ env.Configuration }}
 
       # Upload artifact to Github Actions
       - name: 'Upload Artifact LoaderDll'
